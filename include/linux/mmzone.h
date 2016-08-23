@@ -722,7 +722,28 @@ typedef struct pglist_data {
 	/* Per-node vmstats */
 	struct per_cpu_nodestat __percpu *per_cpu_nodestats;
 	atomic_long_t		vm_stat[NR_VM_NODE_STAT_ITEMS];
+
+	/*
+	 * Coherent memory node
+	 *
+	 * Devices containing coherent memory is represented as a
+	 * special coherent memory NUMA node, should be identified
+	 * differently compared to normal memory nodes. Though it
+	 * shares lot of common properties with system memory, it
+	 * also has some differentiating factors as well.
+	 */
+	u64			coherent;
 } pg_data_t;
+
+enum coherent_memory_type {
+	MNODE_ISOLATION,
+};
+#define MNODE_ISOLATION_MASK    (1UL << MNODE_ISOLATION)
+
+#define node_coherent(nid)       (NODE_DATA(nid)->coherent)
+#define set_mnode_isolation(nid) (node_coherent(nid) |= MNODE_ISOLATION_MASK)
+#define clr_mnode_isolation(nid) (node_coherent(nid) &= ~MNODE_ISOLATION_MASK)
+#define is_mnode_isolation(nid)  (node_coherent(nid) & MNODE_ISOLATION_MASK)
 
 #define node_present_pages(nid)	(NODE_DATA(nid)->node_present_pages)
 #define node_spanned_pages(nid)	(NODE_DATA(nid)->node_spanned_pages)
