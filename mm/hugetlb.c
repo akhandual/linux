@@ -1147,6 +1147,9 @@ static int alloc_fresh_gigantic_page(struct hstate *h,
 	int nr_nodes, node;
 
 	for_each_node_mask_to_alloc(h, nr_nodes, node, nodes_allowed) {
+		if (is_mnode_isolation(node))
+			continue;
+
 		page = alloc_fresh_gigantic_page_node(h, node);
 		if (page)
 			return 1;
@@ -1382,6 +1385,9 @@ static int alloc_fresh_huge_page(struct hstate *h, nodemask_t *nodes_allowed)
 	int ret = 0;
 
 	for_each_node_mask_to_alloc(h, nr_nodes, node, nodes_allowed) {
+		if (is_mnode_isolation(node))
+			continue;
+
 		page = alloc_fresh_huge_page_node(h, node);
 		if (page) {
 			ret = 1;
@@ -1410,6 +1416,9 @@ static int free_pool_huge_page(struct hstate *h, nodemask_t *nodes_allowed,
 	int ret = 0;
 
 	for_each_node_mask_to_free(h, nr_nodes, node, nodes_allowed) {
+		if (is_mnode_isolation(node))
+			continue;
+
 		/*
 		 * If we're returning unused surplus pages, only examine
 		 * nodes with surplus pages.
@@ -2005,6 +2014,9 @@ int __weak alloc_bootmem_huge_page(struct hstate *h)
 	for_each_node_mask_to_alloc(h, nr_nodes, node, &node_states[N_MEMORY]) {
 		void *addr;
 
+		if (is_mnode_isolation(node))
+			continue;
+
 		addr = memblock_virt_alloc_try_nid_nopanic(
 				huge_page_size(h), huge_page_size(h),
 				0, BOOTMEM_ALLOC_ACCESSIBLE, node);
@@ -2133,6 +2145,10 @@ static void try_to_free_low(struct hstate *h, unsigned long count,
 	for_each_node_mask(i, *nodes_allowed) {
 		struct page *page, *next;
 		struct list_head *freel = &h->hugepage_freelists[i];
+
+		if (is_mnode_isolation(i))
+			continue;
+
 		list_for_each_entry_safe(page, next, freel, lru) {
 			if (count >= h->nr_huge_pages)
 				return;
@@ -2166,11 +2182,17 @@ static int adjust_pool_surplus(struct hstate *h, nodemask_t *nodes_allowed,
 
 	if (delta < 0) {
 		for_each_node_mask_to_alloc(h, nr_nodes, node, nodes_allowed) {
+			if (is_mnode_isolation(node))
+				continue;
+
 			if (h->surplus_huge_pages_node[node])
 				goto found;
 		}
 	} else {
 		for_each_node_mask_to_free(h, nr_nodes, node, nodes_allowed) {
+			if (is_mnode_isolation(node))
+				continue;
+
 			if (h->surplus_huge_pages_node[node] <
 					h->nr_huge_pages_node[node])
 				goto found;
@@ -2643,6 +2665,10 @@ static void __init hugetlb_register_all_nodes(void)
 
 	for_each_node_state(nid, N_MEMORY) {
 		struct node *node = node_devices[nid];
+
+		if (is_mnode_isolation(nid))
+			continue;
+
 		if (node->dev.id == nid)
 			hugetlb_register_node(node);
 	}
@@ -2796,8 +2822,12 @@ static unsigned int cpuset_mems_nr(unsigned int *array)
 	int node;
 	unsigned int nr = 0;
 
-	for_each_node_mask(node, cpuset_current_mems_allowed)
+	for_each_node_mask(node, cpuset_current_mems_allowed) {
+		if (is_mnode_isolation(node))
+			continue;
+
 		nr += array[node];
+	}
 
 	return nr;
 }
@@ -2917,7 +2947,10 @@ void hugetlb_show_meminfo(void)
 	if (!hugepages_supported())
 		return;
 
-	for_each_node_state(nid, N_MEMORY)
+	for_each_node_state(nid, N_MEMORY) {
+		if (is_mnode_isolation(nid))
+			continue;
+
 		for_each_hstate(h)
 			pr_info("Node %d hugepages_total=%u hugepages_free=%u hugepages_surp=%u hugepages_size=%lukB\n",
 				nid,
@@ -2925,6 +2958,7 @@ void hugetlb_show_meminfo(void)
 				h->free_huge_pages_node[nid],
 				h->surplus_huge_pages_node[nid],
 				1UL << (huge_page_order(h) + PAGE_SHIFT - 10));
+	}
 }
 
 void hugetlb_report_usage(struct seq_file *m, struct mm_struct *mm)
