@@ -41,10 +41,12 @@
 #include <asm/setup.h>
 #include <asm/vdso.h>
 
+static int node_to_phys_device_map[MAX_NUMNODES];
+
 #ifdef CONFIG_COHERENT_DEVICE
 int arch_check_node_cdm(int nid)
 {
-	return 0;
+	return node_to_phys_device_map[nid];
 }
 #endif
 
@@ -789,6 +791,9 @@ new_range:
 		nid = of_node_to_nid_single(memory);
 		if (nid < 0)
 			nid = default_nid;
+
+		if (of_device_is_compatible(memory, "ibm,hotplug-aperture"))
+			node_to_phys_device_map[nid] = 1;
 
 		fake_numa_create_new_node(((start + size) >> PAGE_SHIFT), &nid);
 		node_set_online(nid);
