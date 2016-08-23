@@ -21,6 +21,7 @@ enum {
 	MPOL_BIND,
 	MPOL_INTERLEAVE,
 	MPOL_LOCAL,
+	MPOL_BIND_STRICT,
 	MPOL_MAX,	/* always last member of enum */
 };
 

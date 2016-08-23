@@ -463,6 +463,10 @@ static const struct mempolicy_operations mpol_ops[MPOL_MAX] = {
 		.create = mpol_new_bind,
 		.rebind = mpol_rebind_nodemask,
 	},
+	[MPOL_BIND_STRICT] = {
+		.create = mpol_new_bind,
+		.rebind = mpol_rebind_nodemask,
+	},
 };
 
 static void migrate_page_add(struct page *page, struct list_head *pagelist,
@@ -1695,6 +1699,11 @@ static struct zonelist *policy_zonelist(gfp_t gfp, struct mempolicy *policy,
 				unlikely(!node_isset(nd, policy->v.nodes)))
 			nd = first_node(policy->v.nodes);
 		break;
+	case MPOL_BIND_STRICT:
+		gfp |= __GFP_THISNODE;
+		if(unlikely(!node_isset(nd, policy->v.nodes)))
+			nd = first_node(policy->v.nodes);
+		break;
 	default:
 		BUG();
 	}
@@ -2143,6 +2152,7 @@ bool __mpol_equal(struct mempolicy *a, struct mempolicy *b)
 
 	switch (a->mode) {
 	case MPOL_BIND:
+	case MPOL_BIND_STRICT:
 		/* Fall through */
 	case MPOL_INTERLEAVE:
 		return !!nodes_equal(a->v.nodes, b->v.nodes);
