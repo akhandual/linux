@@ -64,6 +64,7 @@ static int form1_affinity;
 static int distance_ref_points_depth;
 static const __be32 *distance_ref_points;
 static int distance_lookup_table[MAX_NUMNODES][MAX_DISTANCE_REF_POINTS];
+static int node_to_phys_device_map[MAX_NUMNODES];
 
 /*
  * Allocate node_to_cpumask_map based on number of available nodes
@@ -708,6 +709,17 @@ static void __init parse_drconf_memory(struct device_node *memory)
 	}
 }
 
+int arch_get_memory_phys_device(unsigned long start_pfn)
+{
+	return node_to_phys_device_map[pfn_to_nid(start_pfn)];
+}
+
+int special_mem_node(int nid)
+{
+	return node_to_phys_device_map[nid];
+}
+EXPORT_SYMBOL(special_mem_node);
+
 static int __init parse_numa_properties(void)
 {
 	struct device_node *memory;
@@ -759,6 +771,7 @@ static int __init parse_numa_properties(void)
 		int ranges;
 		const __be32 *memcell_buf;
 		unsigned int len;
+		u32 phys_device = 0;
 
 		memcell_buf = of_get_property(memory,
 			"linux,usable-memory", &len);
@@ -783,6 +796,10 @@ new_range:
 		if (nid < 0)
 			nid = default_nid;
 
+		if (of_device_is_compatible(memory, "ibm,hotplug-aperture"))
+			phys_device = 1;
+
+		node_to_phys_device_map[nid] = phys_device;
 		fake_numa_create_new_node(((start + size) >> PAGE_SHIFT), &nid);
 		node_set_online(nid);
 
@@ -936,6 +953,8 @@ static void __init setup_node_data(int nid, u64 start_pfn, u64 end_pfn)
 	NODE_DATA(nid)->node_id = nid;
 	NODE_DATA(nid)->node_start_pfn = start_pfn;
 	NODE_DATA(nid)->node_spanned_pages = spanned_pages;
+	if (special_mem_node(nid))
+		set_mnode_isolation(nid);
 }
 
 void __init initmem_init(void)
