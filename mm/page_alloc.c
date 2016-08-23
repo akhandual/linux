@@ -4512,6 +4512,13 @@ static int find_next_best_node(int node, nodemask_t *used_node_mask)
 	}
 
 	for_each_node_state(n, N_MEMORY) {
+		/*
+		 * Isolation seeking coherent memory node's zones
+		 * should not be part of any other memory node's
+		 * fallback zonelist.
+		 */
+		if (is_mnode_isolation(n))
+			continue;
 
 		/* Don't want a node to appear more than once */
 		if (node_isset(n, *used_node_mask))
@@ -4667,6 +4674,14 @@ static void build_zonelists(pg_data_t *pgdat)
 	i = 0;
 
 	while ((node = find_next_best_node(local_node, &used_mask)) >= 0) {
+		/*
+		 * Dont rebuild the fallback zonelist for isolation
+		 * seeking coherent memory node. It should have only
+		 * nofallback zonelist containing it's own zones.
+		 */
+		if (is_mnode_isolation(node))
+			continue;
+
 		/*
 		 * We don't want to pressure a particular node.
 		 * So adding penalty to the first node in same
