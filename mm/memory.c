@@ -64,6 +64,7 @@
 #include <linux/debugfs.h>
 #include <linux/userfaultfd_k.h>
 #include <linux/dax.h>
+#include <linux/mmzone.h>
 
 #include <asm/io.h>
 #include <asm/mmu_context.h>
@@ -3169,6 +3170,68 @@ static int __init fault_around_debugfs(void)
 		pr_warn("Failed to create fault_around_bytes in debugfs");
 	return 0;
 }
+
+#ifdef CONFIG_NUMA
+static void show_zonelist(struct seq_file *m, struct zonelist *zonelist)
+{
+	unsigned int i;
+
+	for (i = 0; zonelist->_zonerefs[i].zone; i++) {
+		seq_printf(m, "\t\t(%d) (Node %d) (%-7s 0x%pK)\n", i,
+			zonelist->_zonerefs[i].zone->zone_pgdat->node_id,
+			zone_names[zonelist->_zonerefs[i].zone_idx],
+			(void *) zonelist->_zonerefs[i].zone);
+	}
+}
+
+static int zonelists_show(struct seq_file *m, void *v)
+{
+	struct zonelist *zonelist;
+	unsigned int node;
+
+	for_each_online_node(node) {
+		zonelist = &(NODE_DATA(node)->
+				node_zonelists[ZONELIST_FALLBACK]);
+		seq_printf(m, "[NODE (%d)]\n", node);
+		seq_puts(m, "\tZONELIST_FALLBACK ");
+		seq_printf(m, "(0x%pK)\n", zonelist);
+		show_zonelist(m, zonelist);
+
+		zonelist = &(NODE_DATA(node)->
+				node_zonelists[ZONELIST_NOFALLBACK]);
+		seq_puts(m, "\tZONELIST_NOFALLBACK ");
+		seq_printf(m, "(0x%pK)\n", zonelist);
+		show_zonelist(m, zonelist);
+	}
+	return 0;
+}
+
+static int zonelists_open(struct inode *inode, struct file *filp)
+{
+	return single_open(filp, zonelists_show, NULL);
+}
+
+static const struct file_operations zonelists_fops = {
+	.open		= zonelists_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int __init zonelists_debugfs(void)
+{
+	void *ret;
+
+	ret = debugfs_create_file("zonelists", 0444, NULL, NULL,
+			&zonelists_fops);
+	if (!ret)
+		pr_warn("Failed to create zonelists in debugfs");
+	return 0;
+}
+
+late_initcall(zonelists_debugfs);
+#endif /* CONFIG_NUMA */
+
 late_initcall(fault_around_debugfs);
 #endif
 
