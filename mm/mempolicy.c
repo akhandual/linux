@@ -2928,16 +2928,29 @@ int migrate_virtual_range(int pid, unsigned long start,
 		goto out;
 	}
 
+	pr_info("%s: %d %lx %lx %d: ", __func__, pid, start, end, nid);
 	rcu_read_lock();
 	mm = find_task_by_vpid(pid)->mm;
 	rcu_read_unlock();
 
 	down_write(&mm->mmap_sem);
-	queue_pages_range(mm, start, end, &node_states[N_MEMORY], MPOL_MF_MOVE_ALL | MPOL_MF_DISCONTIG_OK, &mlist);
+	ret = queue_pages_range(mm, start, end, &node_states[N_MEMORY], MPOL_MF_MOVE_ALL | MPOL_MF_DISCONTIG_OK, &mlist);
+	if (ret) {
+		pr_info("queue_pages_range_failed\n");
+		up_write(&mm->mmap_sem);
+		return ret;
+	}
+
 	if (!list_empty(&mlist)) {
 		ret = migrate_pages(&mlist, new_node_page, NULL, nid, MIGRATE_SYNC, MR_NUMA_MISPLACED);
-		if (ret)
+		if (ret) {
+			pr_info("migration_failed for %d pages\n", ret);
 			putback_movable_pages(&mlist);
+		} else {
+			pr_info("migration_passed\n");
+		}
+	} else {
+		pr_info("list_empty\n");
 	}
 	up_write(&mm->mmap_sem);
 out:

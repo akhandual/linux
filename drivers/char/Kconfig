@@ -588,6 +588,29 @@ config TILE_SROM
 	  device appear much like a simple EEPROM, and knows
 	  how to partition a single ROM for multiple purposes.
 
+config COHERENT_HOTPLUG_DEMO
+	tristate "Demo driver to test coherent memory node hotplug"
+	depends on PPC64 || COHERENT_DEVICE
+	default n
+	help
+	  Say yes when you want to build a test driver to hotplug all
+	  the coherent memory nodes present on the system. This driver
+	  scans through the device tree, checks on "ibm,memory-device"
+	  property device nodes and onlines its memory. When unloaded,
+	  it goes through the list of memory ranges it onlined before
+	  and oflines them one by one. If not sure, select N.
+
+config COHERENT_MEMORY_DEMO
+	tristate "Demo driver to test coherent memory node functionality"
+	depends on PPC64 || COHERENT_DEVICE
+	default n
+	help
+	  Say yes when you want to build a test driver to demonstrate
+	  the coherent memory functionalities, capabilities and probable
+	  utilizaton. It also exports a debugfs file to accept inputs for
+	  virtual address range migration for any process. If not sure,
+	  select N.
+
 source "drivers/char/xillybus/Kconfig"
 
 endmenu
