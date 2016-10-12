@@ -60,3 +60,5 @@ js-rtc-y = rtc.o
 obj-$(CONFIG_TILE_SROM)		+= tile-srom.o
 obj-$(CONFIG_XILLYBUS)		+= xillybus/
 obj-$(CONFIG_POWERNV_OP_PANEL)	+= powernv-op-panel.o
+obj-$(CONFIG_COHERENT_HOTPLUG_DEMO)	+= coherent_hotplug_demo.o
+obj-$(CONFIG_COHERENT_MEMORY_DEMO)	+= coherent_memory_demo.o
