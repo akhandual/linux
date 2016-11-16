@@ -572,6 +572,13 @@ static int proc_oom_score(struct seq_file *m, struct pid_namespace *ns,
 	return 0;
 }
 
+static int proc_mems_allowed(struct seq_file *m, struct pid_namespace *ns,
+			  struct pid *pid, struct task_struct *task)
+{
+	seq_printf(m, "%*pbl\n", nodemask_pr_args(&task->mems_allowed));
+	return 0;
+}
+
 struct limit_names {
 	const char *name;
 	const char *unit;
@@ -2877,6 +2884,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("maps",       S_IRUGO, proc_pid_maps_operations),
 #ifdef CONFIG_NUMA
 	REG("numa_maps",  S_IRUGO, proc_pid_numa_maps_operations),
+	ONE("mems_allowed",  S_IRUGO, proc_mems_allowed),
 #endif
 	REG("mem",        S_IRUSR|S_IWUSR, proc_mem_operations),
 	LNK("cwd",        proc_cwd_link),
@@ -3265,6 +3273,7 @@ static const struct pid_entry tid_base_stuff[] = {
 #endif
 #ifdef CONFIG_NUMA
 	REG("numa_maps", S_IRUGO, proc_tid_numa_maps_operations),
+	ONE("mems_allowed",  S_IRUGO, proc_mems_allowed),
 #endif
 	REG("mem",       S_IRUSR|S_IWUSR, proc_mem_operations),
 	LNK("cwd",       proc_cwd_link),
