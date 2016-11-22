@@ -3761,6 +3761,15 @@ got_pg:
 	return page;
 }
 
+static bool cpuset_override(gfp_t alloc_mask, nodemask_t *nodemask)
+{
+	if ((alloc_mask & __GFP_THISNODE) ||
+		(nodemask && nodemask_has_cdm(*nodemask)))
+		return true;
+
+	return false;
+}
+
 /*
  * This is the 'heart' of the zoned buddy allocator.
  */
@@ -3778,7 +3787,7 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 		.migratetype = gfpflags_to_migratetype(gfp_mask),
 	};
 
-	if (cpusets_enabled()) {
+	if (cpusets_enabled() && !cpuset_override(alloc_mask, nodemask)) {
 		alloc_mask |= __GFP_HARDWALL;
 		alloc_flags |= ALLOC_CPUSET;
 		if (!ac.nodemask)
