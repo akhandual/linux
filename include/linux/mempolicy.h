@@ -153,6 +153,8 @@ extern bool init_nodemask_of_mempolicy(nodemask_t *mask);
 extern bool mempolicy_nodemask_intersects(struct task_struct *tsk,
 				const nodemask_t *mask);
 extern unsigned int mempolicy_slab_node(void);
+extern int migrate_virtual_range(int pid, unsigned long vaddr,
+			unsigned long size, int nid);
 
 extern enum zone_type policy_zone;
 
