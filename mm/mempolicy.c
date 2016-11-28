@@ -2882,3 +2882,43 @@ void mpol_to_str(char *buffer, int maxlen, struct mempolicy *pol)
 		p += scnprintf(p, buffer + maxlen - p, ":%*pbl",
 			       nodemask_pr_args(&nodes));
 }
+
+/*
+ * migrate_virtual_range - migrate all pages of a process faulted within
+ * 			a virtual range to a specified node.
+ *
+ * @pid:	PID of the process
+ * @start:	Start of virtual range
+ * @end:	End of virtual range
+ * @nid:	Target node for migration
+ *
+ * Returns number of pages that were not migrated.
+ */
+int migrate_virtual_range(int pid, unsigned long start,
+			unsigned long end, int nid)
+{
+	struct mm_struct *mm;
+	int ret = 0;
+
+	LIST_HEAD(mlist);
+	if ((!start) || (!end)) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	rcu_read_lock();
+	mm = find_task_by_vpid(pid)->mm;
+	rcu_read_unlock();
+
+	down_write(&mm->mmap_sem);
+	queue_pages_range(mm, start, end, &node_states[N_MEMORY], MPOL_MF_MOVE_ALL | MPOL_MF_DISCONTIG_OK, &mlist);
+	if (!list_empty(&mlist)) {
+		ret = migrate_pages(&mlist, new_node_page, NULL, nid, MIGRATE_SYNC, MR_NUMA_MISPLACED);
+		if (ret)
+			putback_movable_pages(&mlist);
+	}
+	up_write(&mm->mmap_sem);
+out:
+	return ret;
+}
+EXPORT_SYMBOL(migrate_virtual_range);
