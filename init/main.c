@@ -1009,7 +1009,7 @@ static noinline void __init kernel_init_freeable(void)
 	/*
 	 * init can allocate pages on any node
 	 */
-	set_mems_allowed(node_states[N_MEMORY]);
+	set_mems_allowed(system_mem_nodemask());
 	/*
 	 * init can run on any cpu.
 	 */
