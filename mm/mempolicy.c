@@ -2017,6 +2017,17 @@ retry_cpuset:
 
 	nmask = policy_nodemask(gfp, pol);
 	zl = policy_zonelist(gfp, pol, node);
+
+	/*
+	 * This is applicable only to MPOL_BIND based memory
+	 * policy which contains atleast one CDM node. Adding
+	 * __GFP_CDM enables its access to CDM memory which is
+	 * otherwise blocked in general.
+	 */
+	if (nmask) {
+		if (nodemask_has_cdm(*nmask))
+			gfp |= __GFP_CDM;
+	}
 	page = __alloc_pages_nodemask(gfp, order, zl, nmask);
 	mpol_cond_put(pol);
 out:

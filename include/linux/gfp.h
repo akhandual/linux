@@ -40,6 +40,7 @@ struct vm_area_struct;
 #define ___GFP_DIRECT_RECLAIM	0x400000u
 #define ___GFP_WRITE		0x800000u
 #define ___GFP_KSWAPD_RECLAIM	0x1000000u
+#define ___GFP_CDM		0x2000000u
 /* If the above are modified, __GFP_BITS_SHIFT may need updating */
 
 /*
@@ -78,12 +79,15 @@ struct vm_area_struct;
  *   node with no fallbacks or placement policy enforcements.
  *
  * __GFP_ACCOUNT causes the allocation to be accounted to kmemcg.
+ *
+ * __GFP_CDM enables the allocation to come from CDM nodes
  */
 #define __GFP_RECLAIMABLE ((__force gfp_t)___GFP_RECLAIMABLE)
 #define __GFP_WRITE	((__force gfp_t)___GFP_WRITE)
 #define __GFP_HARDWALL   ((__force gfp_t)___GFP_HARDWALL)
 #define __GFP_THISNODE	((__force gfp_t)___GFP_THISNODE)
 #define __GFP_ACCOUNT	((__force gfp_t)___GFP_ACCOUNT)
+#define __GFP_CDM	((__force gfp_t)___GFP_CDM)
 
 /*
  * Watermark modifiers -- controls access to emergency reserves

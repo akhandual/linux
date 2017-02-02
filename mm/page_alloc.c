@@ -2908,6 +2908,18 @@ get_page_from_freelist(gfp_t gfp_mask, unsigned int order, int alloc_flags,
 		struct page *page;
 		unsigned long mark;
 
+		/*
+		 * CDM nodes get skipped if the requested gfp flag
+		 * does not have __GFP_CDM. This ensures CDM nodes
+		 * implicit isolation in the kernel and at the same
+		 * time provides __GFP_CDM flag based method for
+		 * explicit allocation as well.
+		 */
+		if (is_cdm_node(zone->zone_pgdat->node_id)) {
+			if (!(gfp_mask & __GFP_CDM))
+				continue;
+		}
+
 		if (cpusets_enabled() &&
 			(alloc_flags & ALLOC_CPUSET) &&
 			!__cpuset_zone_allowed(zone, gfp_mask))
