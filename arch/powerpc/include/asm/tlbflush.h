@@ -20,6 +20,9 @@
  */
 #ifdef __KERNEL__
 
+#include <linux/sched.h>
+#include <linux/mm_types.h>
+
 #ifdef CONFIG_PPC_MMU_NOHASH
 /*
  * TLB flushing for software loaded TLB chips
@@ -82,6 +85,31 @@ static inline void local_flush_tlb_mm(struct mm_struct *mm)
 #else
 #error Unsupported MMU type
 #endif
+
+static inline void arch_tlbbatch_flush(struct arch_tlbflush_unmap_batch *batch)
+{
+	flush_tlb_mm(batch->mm);
+}
+
+static inline void arch_tlbbatch_add_mm(struct arch_tlbflush_unmap_batch *batch, struct mm_struct *mm)
+{
+	cpumask_or(&batch->cpumask, &batch->cpumask, mm_cpumask(mm));
+	batch->mm = mm;
+}
+
+static inline bool arch_tlbbatch_should_defer(struct mm_struct *mm)
+{
+	bool should_defer = false;
+
+	if (!radix_enabled() || cpu_has_feature(CPU_FTR_POWER9_DD1))
+		return false;
+
+	/* If remote CPUs need to be flushed then defer batch the flush */
+	if (cpumask_any_but(mm_cpumask(mm), get_cpu()) < nr_cpu_ids)
+		should_defer = true;
+	put_cpu();
+	return should_defer;
+}
 
 #endif /*__KERNEL__ */
 #endif /* _ASM_POWERPC_TLBFLUSH_H */

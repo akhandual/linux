@@ -230,6 +230,7 @@ config PPC
 	select SPARSE_IRQ
 	select SYSCTL_EXCEPTION_TRACE
 	select VIRT_TO_BUS			if !PPC64
+	select ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH if (PPC64 && PPC_BOOK3S)
 	#
 	# Please keep this list sorted alphabetically.
 	#
