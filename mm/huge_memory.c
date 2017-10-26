@@ -314,6 +314,58 @@ static struct kobj_attribute debug_cow_attr =
 	__ATTR(debug_cow, 0644, debug_cow_show, debug_cow_store);
 #endif /* CONFIG_DEBUG_VM */
 
+unsigned long shrink_list_tb;
+unsigned long shrink_list_jf;
+
+EXPORT_SYMBOL(shrink_list_tb);
+EXPORT_SYMBOL(shrink_list_jf);
+
+static ssize_t shrink_list_tb_show(struct kobject *kobj,
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%lu\n", shrink_list_tb);
+}
+
+static ssize_t shrink_list_tb_store(struct kobject *kobj,
+			       struct kobj_attribute *attr,
+			       const char *buf, size_t count)
+{
+	unsigned long value;
+	int ret;
+
+	ret = kstrtoul(buf, 10, &value);
+	if (ret < 0)
+		return ret;
+	shrink_list_tb = value;
+	return count;
+}
+
+static ssize_t shrink_list_jf_show(struct kobject *kobj,
+				struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%lu\n", shrink_list_jf);
+}
+
+static ssize_t shrink_list_jf_store(struct kobject *kobj,
+			       struct kobj_attribute *attr,
+			       const char *buf, size_t count)
+{
+	unsigned long value;
+	int ret;
+
+	ret = kstrtoul(buf, 10, &value);
+	if (ret < 0)
+		return ret;
+	shrink_list_jf = value;
+	return count;
+}
+
+static struct kobj_attribute shrink_msr_tb =
+	__ATTR(shrink_measure_tb, 0644, shrink_list_tb_show, shrink_list_tb_store);
+
+static struct kobj_attribute shrink_msr_jf =
+	__ATTR(shrink_measure_jf, 0644, shrink_list_jf_show, shrink_list_jf_store);
+
 static struct attribute *hugepage_attr[] = {
 	&enabled_attr.attr,
 	&defrag_attr.attr,
@@ -325,6 +377,8 @@ static struct attribute *hugepage_attr[] = {
 #ifdef CONFIG_DEBUG_VM
 	&debug_cow_attr.attr,
 #endif
+	&shrink_msr_tb.attr,
+	&shrink_msr_jf.attr,
 	NULL,
 };
 
@@ -336,6 +390,8 @@ static int __init hugepage_init_sysfs(struct kobject **hugepage_kobj)
 {
 	int err;
 
+	shrink_list_tb = 0;
+	shrink_list_jf = 0;
 	*hugepage_kobj = kobject_create_and_add("transparent_hugepage", mm_kobj);
 	if (unlikely(!*hugepage_kobj)) {
 		pr_err("failed to create transparent hugepage kobject\n");

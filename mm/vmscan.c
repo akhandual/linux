@@ -1366,6 +1366,9 @@ keep:
 	return nr_reclaimed;
 }
 
+extern unsigned long shrink_list_tb;
+extern unsigned long shrink_list_jf;
+
 unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 					    struct list_head *page_list)
 {
@@ -1377,6 +1380,8 @@ unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 	unsigned long ret;
 	struct page *page, *next;
 	LIST_HEAD(clean_pages);
+	u64 start_tb, end_tb;
+	u64 start_jf, end_jf;
 
 	list_for_each_entry_safe(page, next, page_list, lru) {
 		if (page_is_file_cache(page) && !PageDirty(page) &&
@@ -1386,8 +1391,15 @@ unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 		}
 	}
 
+	start_tb = mftb();
+	start_jf = jiffies;
 	ret = shrink_page_list(&clean_pages, zone->zone_pgdat, &sc,
 			TTU_IGNORE_ACCESS, NULL, true);
+	end_tb = mftb();
+	end_jf = jiffies;
+	shrink_list_tb += (end_tb - start_tb);
+	shrink_list_jf += (end_jf - start_jf);
+
 	list_splice(&clean_pages, page_list);
 	mod_node_page_state(zone->zone_pgdat, NR_ISOLATED_FILE, -ret);
 	return ret;
@@ -1756,6 +1768,8 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	struct pglist_data *pgdat = lruvec_pgdat(lruvec);
 	struct zone_reclaim_stat *reclaim_stat = &lruvec->reclaim_stat;
 	bool stalled = false;
+	u64 start_tb, end_tb;
+	u64 start_jf, end_jf;
 
 	while (unlikely(too_many_isolated(pgdat, file, sc))) {
 		if (stalled)
@@ -1799,9 +1813,14 @@ shrink_inactive_list(unsigned long nr_to_scan, struct lruvec *lruvec,
 	if (nr_taken == 0)
 		return 0;
 
+	start_tb = mftb();
+	start_jf = jiffies;
 	nr_reclaimed = shrink_page_list(&page_list, pgdat, sc, 0,
 				&stat, false);
-
+	end_tb = mftb();
+	end_jf = jiffies;
+	shrink_list_tb += (end_tb - start_tb);
+	shrink_list_jf += (end_jf - start_jf);
 	spin_lock_irq(&pgdat->lru_lock);
 
 	if (current_is_kswapd()) {
