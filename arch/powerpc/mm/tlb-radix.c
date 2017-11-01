@@ -12,6 +12,8 @@
 #include <linux/mm.h>
 #include <linux/hugetlb.h>
 #include <linux/memblock.h>
+#include <linux/mutex.h>
+#include <linux/smp.h>
 
 #include <asm/ppc-opcode.h>
 #include <asm/tlb.h>
@@ -668,3 +670,50 @@ extern void radix_kvm_prefetch_workaround(struct mm_struct *mm)
 }
 EXPORT_SYMBOL_GPL(radix_kvm_prefetch_workaround);
 #endif /* CONFIG_KVM_BOOK3S_HV_POSSIBLE */
+
+#ifdef CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH
+static void clear_tlb(void *data)
+{
+	struct arch_tlbflush_unmap_batch *batch = data;
+	int i;
+
+	WARN_ON(!radix_enabled() || cpu_has_feature(CPU_FTR_POWER9_DD1));
+
+	for (i = 0; i < batch->nr_mm; i++) {
+		if (batch->mm[i])
+			radix__local_flush_tlb_mm(batch->mm[i]);
+	}
+}
+
+void arch_tlbbatch_flush(struct arch_tlbflush_unmap_batch *batch)
+{
+	WARN_ON(!radix_enabled() || cpu_has_feature(CPU_FTR_POWER9_DD1));
+
+	smp_call_function_many(&batch->cpumask, (void *)clear_tlb, batch, 1);
+	batch->nr_mm = 0;
+	cpumask_clear(&batch->cpumask);
+}
+
+void arch_tlbbatch_add_mm(struct arch_tlbflush_unmap_batch *batch, struct mm_struct *mm)
+{
+	WARN_ON(!radix_enabled() || cpu_has_feature(CPU_FTR_POWER9_DD1));
+
+	++batch->nr_mm;
+	if (batch->nr_mm != MAX_BATCHED_MM)
+		batch->mm[batch->nr_mm] = mm;
+	else
+		pr_err("Deferred TLB flush: missed a struct mm\n");
+	cpumask_or(&batch->cpumask, &batch->cpumask, mm_cpumask(mm));
+}
+
+bool arch_tlbbatch_should_defer(struct mm_struct *mm)
+{
+	if (!radix_enabled() || cpu_has_feature(CPU_FTR_POWER9_DD1))
+		return false;
+
+	if (!mm_is_thread_local(mm))
+		return true;
+
+	return false;
+}
+#endif

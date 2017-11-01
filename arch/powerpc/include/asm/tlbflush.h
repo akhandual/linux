@@ -20,6 +20,9 @@
  */
 #ifdef __KERNEL__
 
+#include <linux/sched.h>
+#include <linux/mm_types.h>
+
 #ifdef CONFIG_PPC_MMU_NOHASH
 /*
  * TLB flushing for software loaded TLB chips
